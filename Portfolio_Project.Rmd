@@ -1,0 +1,411 @@
+---
+title: "**Unlocking Profitable Insights: A Comprehensive Analysis of Sales, Profit, and Customer Behavior in the EU Superstore Data**"
+author: "Zunaira Azam"
+date: "2024-01-20"
+output: html_document
+
+---
+
+## **Objectives**
+
+Objective of the study are:
+
+
+- Identify the top-selling region in the EU Superstore dataset.
+
+
+- Identify top-selling product categories driving overall revenue.
+
+
+- Examine key subcategories driving sales to gain insights into customer-favored product types.
+
+
+- Use rolling window analysis to smooth out short-term fluctuations and reveal trends in metrics such as sales, profit, quantity, and discount by calculating their rolling averages over a set time window.
+
+
+- Examine quarterly sales data, group by quarters, and create visualizations to reveal seasonal patterns and fluctuations in Sample EU Superstore's performance.
+
+
+- Analyze the profit margin for each product.
+
+
+- Analyze which products or categories respond better to discounts.
+
+## **Key Questions**
+
+1. What are the top categories and sub-categories in terms of sales and profit?
+
+
+2. Are there any specific products that contribute significantly to profit?
+
+
+3. What is the distribution of sales, quantity, discount, and profit?
+
+
+4. How are sales and profit distributed across different regions, categories, and sub-categories?
+
+
+5. Which region has the highest sales?
+
+
+6. How do profit and sales vary across different regions?
+
+
+7. How does the average sales vary across different ship modes?
+
+
+8. Are there any products that can consistently contribute to high profits?
+
+
+9. How does the application of discounts impact the sales performance of different products or categories?
+
+
+10. How does the profit margin vary across different products?
+
+
+### **Project Analysis**
+
+```{r, echo=FALSE, results='hide'}
+# Import dataset
+library(readxl)
+# Import dataset
+Sample_EU_Superstore <- read_excel("C:/Users/Mg/Documents/Sample - EU Superstore.xlsx")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(corrplot)
+library(lubridate)
+library(zoo)
+```
+
+```{r,echo=FALSE, results='hide'}
+# Missing values summary
+as.data.frame(summary(is.na(Sample_EU_Superstore)))
+```
+
+### **1. Summary**
+
+```{r}
+summary_df <- summary(Sample_EU_Superstore[c("Sales", "Quantity", "Discount", "Profit")])
+summary_df <- as.data.frame(as.table(summary_df))
+colnames(summary_df) <- c("Variable", "Statistic", "Value")
+
+# Replace 'Variable' column values with the actual variable names
+summary_df$Variable <- c("Sales", "Quantity", "Profit", "Discount")
+
+# Assuming your summary output looks something like this
+summary_df <- summary(Sample_EU_Superstore[c("Sales", "Quantity", "Discount", "Profit")])
+summary_df <- as.data.frame(as.table(summary_df))
+colnames(summary_df) <- c("Variable", "Statistic", "Value")
+
+# Replace 'Variable' column values with the actual variable names
+summary_df$Variable <- c("Sales", "Quantity", "Profit", "Discount")
+
+```
+
+### **2. Total Sales Across Regions**
+
+```{r}
+# Region-wise analysis
+region_sales <- Sample_EU_Superstore %>% 
+  group_by(Region) %>% 
+  summarise(total_sales = sum(Sales))
+as.data.frame(print(region_sales))
+```
+```{r}
+# Bar plot for sales across regions with Plotly
+region_sales_plot<- ggplot(region_sales, aes(x = Region, y = total_sales, fill = Region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Sales Across Regions", x = "Region", y = "Total Sales") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Convert ggplot to plotly
+region_plot<-ggplotly(region_sales_plot)
+region_plot
+```
+
+### **3. Proportions for Region Sales**
+
+```{r}
+#Proportions
+region_sales_prop <- Sample_EU_Superstore %>% 
+  group_by(Region) %>% 
+  summarise(total_sales = sum(Sales))
+# Calculate the percentage contribution
+region_sales_prop$Percentage <- (region_sales$total_sales / sum(region_sales$total_sales)) * 100
+# Print the results
+print(region_sales_prop)
+```
+```{r}
+# Stacked bar plot for percentage contribution of sales by region with Plotly
+region_plot <- ggplotly(
+  ggplot(region_sales_prop, aes(x = Region, y = Percentage, fill = Region)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(title = "Percentage Contribution of Sales by Region",
+         x = "Region",
+         y = "Percentage (%)") +
+    theme_minimal()
+)
+region_plot
+```
+
+### **4. Category Wise Analysis**
+
+```{r}
+# Category-wise analysis
+category_sales <- Sample_EU_Superstore %>% 
+  group_by(Category) %>% 
+  summarise(total_sales = sum(Sales)) 
+  print(category_sales)
+```
+```{r}
+# Convert total_sales to decimal format
+category_sales$total_sales <- format(category_sales$total_sales, scientific = FALSE)
+# Bar plot for sales across categories
+category_sales_plot <- ggplot(category_sales, aes(x = Category, y = total_sales, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Sales Across Categories", x = "Category", y = "Total Sales") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Convert ggplot to plotly
+category_sales_plotly <- ggplotly(category_sales_plot)
+# Display the plotly object
+category_sales_plotly
+```
+
+### **5. Sub_Category Analysis**
+
+```{r}
+## Sub-category-wise analysis
+sub_category_profit <- Sample_EU_Superstore %>% 
+  group_by(`Sub-Category`) %>% 
+  summarise(total_profit = sum(Profit))
+print(sub_category_profit)
+```
+```{r}
+sub_category_profit_plot <- ggplot(sub_category_profit, aes(x = `Sub-Category`, y = total_profit, fill = `Sub-Category`)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Profit Across Sub-categories", x = "Sub-category", y = "Total Profit") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+sub_category_profit_plotly <- ggplotly(sub_category_profit_plot)
+sub_category_profit_plotly
+
+```
+
+### **6. Quarterly Sales Analysis**
+
+```{r}
+# Convert Order Date to Date format
+Sample_EU_Superstore$`Order Date` <- as.Date(Sample_EU_Superstore$`Order Date`)
+
+# Extract quarter from Order Date
+Sample_EU_Superstore$Quarter <- quarter(Sample_EU_Superstore$`Order Date`, with_year = TRUE)
+
+# Aggregate Quarterly Sales by Segments
+quarterly_sales <- Sample_EU_Superstore %>%
+  group_by(Segment, Quarter) %>%
+  summarise(total_sales = sum(Sales))
+print(quarterly_sales)
+```
+```{r}
+# Plot Quarterly Sales by Segments
+quarterly_sales_plot <- ggplot(quarterly_sales, aes(x = Quarter, y = total_sales, color = Segment)) +
+  geom_line(size = 1.5) +
+  geom_point(size = 3) +
+  labs(title = "Quarterly Sales by Segments",
+       x = "Quarter",
+       y = "Total Sales",
+       color = "Segments") +
+  theme_minimal()
+# Display the interactive plot using plotly
+ggplotly(quarterly_sales_plot)
+
+```
+
+### **7. Yearly Sales Forecast** 
+
+```{r}
+# Convert Order Date to Date format
+Sample_EU_Superstore$`Order Date` <- as.Date(Sample_EU_Superstore$`Order Date`)
+# Define a function to compute the desired metric (e.g., rolling average) within the rolling window
+rolling_window_function <- function(data) {
+  # Replace 'Sales' with the desired metric (Sales, Profit, Quantity, Discount)
+  result <- mean(data, na.rm = TRUE)
+  return(result)
+}
+# Set the size of the rolling window (e.g., 3 months)
+window_size <- 3
+# Apply rolling window analysis to the entire dataset
+rolling_window_results <- Sample_EU_Superstore %>%
+  arrange(`Order Date`) %>%
+  group_by(`Order Date`) %>%
+  summarise(Sales = sum(Sales)) %>%
+  mutate(rolling_sales = zoo::rollapply(Sales, window_size, rolling_window_function, align = "right", fill = NA, partial = TRUE))
+print(rolling_window_results) # Display the results
+```
+```{r}
+print(rolling_window_results)
+# Line chart for rolling sales with enhanced readability
+plot <- ggplot(rolling_window_results, aes(x = `Order Date`, y = rolling_sales)) +
+  geom_line(color = "lightblue", linewidth = 1, linetype = "solid") +
+  geom_smooth(method = "loess", se = FALSE, color = "green", linetype = "dashed") +
+  labs(title = "Rolling Window Analysis - Sales Over Time",
+       x = "Order Date",
+       y = "Rolling Sales",
+       caption = "Dashed line represents a smoothed trend") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  annotate("text", x = max(rolling_window_results$`Order Date`), y = max(rolling_window_results$rolling_sales), 
+           label = "Smoothed Trend", hjust = 1.2, vjust = 0.5, color = "orange") +
+  geom_point(size = 2, color = "pink") 
+rolling_window_plot <- ggplotly(plot); rolling_window_plot
+```
+
+### **8. Yearly Sales and Profit**
+
+```{r}
+# Convert 'Order Date' to a Date type
+Sample_EU_Superstore$`Order Date` <- as.Date(Sample_EU_Superstore$`Order Date`)
+
+# Extract year from 'Order Date'
+Sample_EU_Superstore <- Sample_EU_Superstore %>%
+  mutate(Year = year(`Order Date`))
+
+# Group by year and calculate total sales and profit
+yearly_summary <- Sample_EU_Superstore %>%
+  group_by(Year) %>%
+  summarise(TotalSales = sum(Sales),
+            TotalProfit = sum(Profit))
+print(yearly_summary)
+```
+```{r}
+# Visualize the results with a line chart
+ggplotly(ggplot(yearly_summary, aes(x = factor(Year), y = TotalSales, group = 1)) +
+  geom_line(aes(color = "Total Sales"), size = 1) +
+  geom_line(aes(y = TotalProfit, color = "Total Profit"), size = 1) +
+  ggtitle("Yearly Sales and Profit") +
+  xlab("Year") +
+  ylab("Amount") +
+  scale_color_manual(values = c("Total Sales" = "#4e79a7", "Total Profit" = "#e15759")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "top"
+  )
+)
+
+```
+
+### **9. TOP 10 Products by Total Profit**
+
+```{r}
+###Product Analysis
+# Group by product and calculate total sales, profit, and profit margin
+product_summary <- Sample_EU_Superstore %>%
+  group_by(`Product ID`, `Product Name`) %>%
+  summarise(TotalSales = sum(Sales),
+            TotalProfit = sum(Profit),
+            ProfitMargin = sum(Profit) / sum(Sales) * 100) %>%
+  arrange(desc(TotalProfit))
+
+# Select the top N products (adjust N as needed)
+top_products <- head(product_summary, 10)
+
+# Visualize the results with rotated x-axis labels
+ggplotly(ggplot(top_products, aes(x = reorder(`Product Name`, -TotalProfit), y = TotalProfit)) +
+  geom_bar(stat = "identity",fill = "yellow") +
+  ggtitle("Top 10 Products by Total Profit") +
+  xlab("Product Name") +
+  ylab("Total Profit") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate labels for better readability
+)
+```
+
+### **10. Average Sales with Different Discounts**
+
+```{r}
+#Discount Analysis
+# Assuming you have a column 'Discount' in your dataset
+discount_analysis <- Sample_EU_Superstore %>%
+  group_by(Category, `Product Name`, Discount) %>%
+  summarise(AvgSales = mean(Sales))
+discount_analysis
+```
+
+```{r}
+# Visualize the results
+
+plot <- ggplot(discount_analysis, aes(x = Discount, y = AvgSales, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  ggtitle("Average Sales with Different Discounts") +
+  xlab("Discount") +
+  ylab("Average Sales") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Use ggplotly to convert to interactive plotly plot
+plotly_plot <- ggplotly(plot)
+plotly_plot
+```
+
+### **11. Top Profitable Products**
+
+```{r}
+#product analysis
+# Calculate total profit for each product
+product_profit <- Sample_EU_Superstore %>%
+  group_by(`Product ID`, `Product Name`) %>%
+  summarize(TotalProfit = sum(Profit))
+
+# Identify top products with consistently high profits
+top_profitable_products <- product_profit %>%
+  filter(TotalProfit > quantile(TotalProfit, 0.75))  # Adjust the quantile threshold as needed
+top_profitable_products
+```
+
+```{r}
+# Visualize top profitable products
+ggplotly(ggplot(top_profitable_products, aes(x = reorder(`Product Name`, -TotalProfit), y = TotalProfit)) +
+  geom_bar(stat = "identity", fill = "pink") +
+  labs(title = "Top Profitable Products",
+       x = "Product Name",
+       y = "Total Profit") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+)
+```
+
+### **12. Average Sales Across Different Ship Modes**
+
+```{r}
+###ship mode analysis: 
+# Group the data by ship mode and calculate the average sales for each mode
+ship_mode_sales <- Sample_EU_Superstore %>%
+  group_by(`Ship Mode`) %>%
+  summarise(AverageSales = mean(Sales, na.rm = TRUE))
+# Print the result
+print(ship_mode_sales)
+```
+
+```{r}
+# Create a more attractive bar plot
+ggplotly(ggplot(ship_mode_sales, aes(x = reorder(`Ship Mode`, -AverageSales), y = AverageSales, fill = `Ship Mode`)) +
+  geom_bar(stat = "identity", size = 0.7) +
+  labs(title = "Average Sales Across Different Ship Modes",
+       x = "Ship Mode",
+       y = "Average Sales") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position="none") +
+  scale_fill_brewer(palette = "Set3")  # You can choose a different color palette
+)
+```
